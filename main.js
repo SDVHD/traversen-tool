@@ -34,9 +34,9 @@ const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, linewidth: 3
 
 // Speichere die initialen Positionen
 const initialPositions = {
-    anchor1: new THREE.Vector3(0, 2, 0),
+    anchor1: new THREE.Vector3(-2, 2, 0),
     anchor2: new THREE.Vector3(2, 2, 0),
-    attachmentPoint: new THREE.Vector3(1, 0, 1)
+    attachmentPoint: new THREE.Vector3(0, 0, 0)
 };
 
 // Ankerpunkte
