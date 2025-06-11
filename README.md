@@ -1,5 +1,3 @@
-Hier ist die `README.md` in Markdown formatiert:
-
 -----
 
 # 🏗️ Traversen-Anschlag Tool 🏗️
