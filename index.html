@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traversen-Anschlag Tool</title>
+    <link rel="stylesheet" href="./style.css"> 
+</head>
+<body>
+    <div id="app-layout-wrapper"> 
+
+        <div id="info-panel">
+            <header>
+                <h1>Traversen-Anschlag Tool</h1>
+                <p>Ziehen Sie die Punkte in der 3D-Ansicht oder passen Sie die Koordinaten an, um die Winkel zu ändern.</p>
+            </header>
+            
+            <section class="input-section">
+                <div class="input-group">
+                    <h3>Ankerpunkt 1 (A1)</h3>
+                    <div class="coordinates">
+                        <label for="a1-x">X:</label> 
+                        <input type="number" id="a1-x" value="0">
+                        <label for="a1-y">Y:</label> 
+                        <input type="number" id="a1-y" value="2">
+                        <label for="a1-z">Z:</label> 
+                        <input type="number" id="a1-z" value="0">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <h3>Ankerpunkt 2 (A2)</h3>
+                    <div class="coordinates">
+                        <label for="a2-x">X:</label> 
+                        <input type="number" id="a2-x" value="2">
+                        <label for="a2-y">Y:</label> 
+                        <input type="number" id="a2-y" value="2">
+                        <label for="a2-z">Z:</label> 
+                        <input type="number" id="a2-z" value="0">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <h3>Anschlagpunkt (P)</h3>
+                    <div class="coordinates">
+                        <label for="p-x">X:</label> 
+                        <input type="number" id="p-x" value="1">
+                        <label for="p-y">Y:</label> 
+                        <input type="number" id="p-y" value="0">
+                        <label for="p-z">Z:</label> 
+                        <input type="number" id="p-z" value="1">
+                    </div>
+                </div>
+            </section>
+            
+            <section class="results-section">
+                <h3>Ergebnisse:</h3>
+                <p>Länge A1-P: <span id="len-a1-p"></span> m</p>
+                <p>Länge A2-P: <span id="len-a2-p"></span> m</p>
+                <p>Neigungswinkel A1-P (vertikal): <span id="angle-a1-vert"></span> °</p>
+                <p>Neigungswinkel A2-P (vertikal): <span id="angle-a2-vert"></span> °</p>
+                <p>Öffnungswinkel A1-P-A2: <span id="angle-open"></span> °</p>
+            </section>
+            
+            <footer>
+                <button id="reset-button">Punkte zurücksetzen</button>
+                <div class="app-footer">
+                    <p>&copy; 2025 [Dein Name oder Organisation]. Alle Rechte vorbehalten.</p>
+                    <nav>
+                        <a href="impressum.html">Impressum</a>
+                        </nav>
+                </div>
+            </footer>
+        </div>
+        
+        <div id="three-container"></div>
+
+    </div> <script type="module" src="/main.js"></script>
+</body>
+</html>

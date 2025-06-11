@@ -1,0 +1,260 @@
+/* Grundlegende Reset-Stile und Box-Sizing */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #333;
+    min-height: 100vh;
+    background-color: #f8f8f8; /* Leichter Hintergrund */
+    /* overflow: hidden; ist hier WEG! */
+}
+
+/* Neuer Wrapper für das Haupt-Tool-Layout */
+#app-layout-wrapper {
+    display: grid; /* Nutze CSS Grid für das Hauptlayout */
+    grid-template-rows: auto 1fr; /* Info-Panel auto, Three.js-Container nimmt restlichen Platz */
+    grid-template-columns: 1fr; /* Auf kleinen Bildschirmen nur eine Spalte */
+    min-height: 100vh; /* Muss die volle Höhe einnehmen, damit das Grid funktioniert */
+    overflow: hidden; /* NUR hier wird der Overflow unterdrückt */
+}
+
+
+/* Info-Panel Styling */
+#info-panel {
+    background-color: #ffffff;
+    padding: 25px;
+    border-right: 1px solid #e0e0e0; /* Trennlinie zum 3D-Bereich auf Desktops */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* Leichter Schatten */
+    overflow-y: auto; /* Scrollbar für lange Inhalte */
+    max-height: 100vh; /* Begrenzt die Höhe des Panels */
+    display: flex; /* Flexbox für interne Anordnung */
+    flex-direction: column;
+    gap: 20px; /* Abstand zwischen den Sektionen */
+}
+
+#info-panel header h1 {
+    font-size: 2em; /* Größere Überschrift */
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+#info-panel header p {
+    font-size: 0.95em;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 15px;
+}
+
+/* Three.js Container */
+#three-container {
+    background-color: #f0f0f0;
+    /* three-container nimmt den restlichen Platz durch grid-template-rows 1fr */
+}
+
+canvas {
+    display: block; /* Wichtig für Three.js Canvas */
+    width: 100%;
+    height: 100%;
+}
+
+/* Input-Gruppen Styling */
+.input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Abstand zwischen den Input-Gruppen */
+}
+
+.input-group {
+    background-color: #fdfdfd;
+    padding: 15px;
+    border: 1px solid #e9e9e9;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+}
+
+.input-group h3 {
+    font-size: 1.15em;
+    font-weight: 600;
+    color: #4a69bd; /* Akzentfarbe für Überschriften */
+    margin-bottom: 12px;
+}
+
+.input-group .coordinates {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Abstand zwischen Label und Input */
+    flex-wrap: wrap; /* Erlaubt Umbruch auf kleinen Bildschirmen */
+}
+
+.input-group label {
+    font-size: 0.95em;
+    color: #555;
+    min-width: 15px; /* Etwas Platz für Labels */
+}
+
+.input-group input[type="number"] {
+    width: 70px; /* Etwas breiter für bessere Usability */
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 0.95em;
+    color: #333;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-group input[type="number"]:focus {
+    outline: none;
+    border-color: #4a69bd; /* Akzentfarbe beim Fokus */
+    box-shadow: 0 0 0 3px rgba(74, 105, 189, 0.2); /* Leuchtender Rand */
+}
+
+/* Ergebnis-Anzeige Styling */
+.results-section {
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 20px; /* Abstand zur oberen Sektion */
+}
+
+.results-section h3 {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 12px;
+}
+
+.results-section p {
+    margin-bottom: 8px;
+    font-size: 0.95em;
+    color: #444;
+    display: flex;
+    justify-content: space-between; /* Werte rechtsbündig */
+}
+
+.results-section span {
+    font-weight: 600;
+    color: #4a69bd; /* Akzentfarbe für Ergebniswerte */
+    min-width: 60px; /* Stellt sicher, dass die Werte nicht umbrechen */
+    text-align: right;
+}
+
+/* Reset-Button Styling */
+#reset-button {
+    width: 100%;
+    padding: 12px 20px;
+    margin-top: auto; /* Schiebt den Button nach unten im Flex-Container */
+    background-color: #4a69bd; /* Akzentfarbe */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+#reset-button:hover {
+    background-color: #3b5090; /* Dunkler beim Hover */
+    transform: translateY(-2px); /* Leichter Hoch-Effekt */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+#reset-button:active {
+    transform: translateY(0); /* Zurück beim Klick */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Styling für den neuen App-Footer */
+.app-footer {
+    margin-top: 30px; /* Abstand nach oben */
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0; /* Trennlinie */
+    text-align: center;
+    font-size: 0.85em;
+    color: #777;
+}
+
+.app-footer p {
+    margin-bottom: 10px;
+}
+
+.app-footer nav a {
+    color: #4a69bd; /* Akzentfarbe für Links */
+    text-decoration: none;
+    margin: 0 10px; /* Abstand zwischen Links */
+    transition: color 0.2s ease;
+}
+
+.app-footer nav a:hover {
+    color: #3b5090;
+    text-decoration: underline;
+}
+
+/* Anpassung für den Footer in der Flexbox (damit er am Ende ist) */
+#info-panel footer {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto; /* Schiebt Footer und Button nach unten im Panel */
+    padding-top: 0; /* Keinen doppelten Padding */
+}
+
+/* Optional: Anpassung des Reset-Buttons, da er jetzt im Footer ist */
+#reset-button {
+    margin-bottom: 20px; /* Abstand zum Footer-Inhalt */
+}
+
+/* --- Responsive Anpassungen mit Media Queries --- */
+
+@media (min-width: 768px) { /* Für Bildschirme ab 768px Breite (Desktop/Tablet-Querformat) */
+    #app-layout-wrapper {
+        grid-template-columns: 350px 1fr; /* Linkes Panel 350px, rechter Bereich nimmt Rest */
+        grid-template-rows: 1fr; /* Nur eine Reihe */
+    }
+
+    #info-panel {
+        width: 350px; /* Feste Breite durch Grid-Spalte */
+        height: 100vh; /* Panel nimmt volle Viewport-Höhe ein */
+        max-height: 100vh;
+    }
+}
+
+@media (max-width: 767px) { /* Für Bildschirme unter 768px (Mobile Hochformat) */
+    #info-panel {
+        padding-bottom: 80px; /* Extra Platz für potentielles Überlappen mit Mobile-Browser-UI */
+    }
+    .input-group .coordinates {
+        flex-direction: column; /* X, Y, Z untereinander auf sehr kleinen Bildschirmen */
+        align-items: flex-start;
+    }
+    .input-group .coordinates label {
+        width: 100%; /* Label nimmt volle Breite ein */
+        margin-bottom: 5px;
+    }
+    .input-group .coordinates input {
+        width: 100%; /* Input nimmt volle Breite ein */
+    }
+}
+
+/* Optional: Scrollbar-Stil */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
