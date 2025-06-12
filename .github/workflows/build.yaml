@@ -1,0 +1,32 @@
+name: Build Project (Node.js/Vite)
+
+on:
+  push:
+    branches:
+      - main # Der Branch, auf den du pushst, um den Workflow auszulösen
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Das Betriebssystem, auf dem der Job ausgeführt wird
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4 # Klonen des Repositorys
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Oder die Node.js-Version, die du lokal verwendest (z.B. '18', '20', '22')
+        cache: 'npm' # Nutzt NPM-Cache, um Installationen zu beschleunigen
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: your-project-build # Der Name, unter dem das Artefakt gespeichert wird
+        path: ./dist             # Der Pfad zu deinem gebauten Projekt (der 'dist'-Ordner)
