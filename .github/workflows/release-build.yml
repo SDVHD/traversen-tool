@@ -2,11 +2,14 @@ name: Build and Release Artifact
 
 on:
   release:
-    types: [published] # Dieser Workflow wird ausgelöst, wenn ein neuer Release veröffentlicht wird
+    types: [published]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Füge diesen permissions-Block hinzu
+    permissions:
+      contents: write # Dies ist die Berechtigung, die wir brauchen
 
     steps:
     - name: Checkout Repository
@@ -15,7 +18,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20' # Deine Node.js-Version
+        node-version: '20'
         cache: 'npm'
 
     - name: Install Dependencies
@@ -26,13 +29,13 @@ jobs:
 
     - name: Archive Production Build
       run: |
-        tar -czf dist.tar.gz -C dist . # Erstellt ein komprimiertes Archiv des dist-Ordners
+        tar -czf dist.tar.gz -C dist .
 
     - name: Upload Release Asset
-      uses: softprops/action-gh-release@v2 # Action zum Hochladen von Release-Assets
+      uses: softprops/action-gh-release@v2
       if: github.event_name == 'release' && github.event.action == 'published'
       with:
-        files: dist.tar.gz # Pfad zum Archiv, das hochgeladen werden soll
-        tag_name: ${{ github.ref_name }} # Nutzt den Release-Tag-Namen
+        files: dist.tar.gz
+        tag_name: ${{ github.ref_name }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Benötigt für Authentifizierung
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Dieses Token hat jetzt die 'contents: write'-Berechtigung
