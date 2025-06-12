@@ -3,7 +3,7 @@ name: Build Project (Node.js/Vite)
 on:
   push:
     branches:
-      - main # Der Branch, auf den du pushst, um den Workflow auszulösen
+      - master # Der Branch, auf den du pushst, um den Workflow auszulösen
 
 jobs:
   build:
