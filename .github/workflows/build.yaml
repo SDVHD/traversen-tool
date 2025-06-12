@@ -28,5 +28,5 @@ jobs:
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: your-project-build # Der Name, unter dem das Artefakt gespeichert wird
+        name: new_build # Der Name, unter dem das Artefakt gespeichert wird
         path: ./dist             # Der Pfad zu deinem gebauten Projekt (der 'dist'-Ordner)
