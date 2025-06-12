@@ -1,0 +1,38 @@
+name: Build and Release Artifact
+
+on:
+  release:
+    types: [published] # Dieser Workflow wird ausgelöst, wenn ein neuer Release veröffentlicht wird
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Deine Node.js-Version
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Build Project
+      run: npm run build
+
+    - name: Archive Production Build
+      run: |
+        tar -czf dist.tar.gz -C dist . # Erstellt ein komprimiertes Archiv des dist-Ordners
+
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v2 # Action zum Hochladen von Release-Assets
+      if: github.event_name == 'release' && github.event.action == 'published'
+      with:
+        files: dist.tar.gz # Pfad zum Archiv, das hochgeladen werden soll
+        tag_name: ${{ github.ref_name }} # Nutzt den Release-Tag-Namen
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Benötigt für Authentifizierung
