@@ -5,21 +5,23 @@ import { DragControls } from 'three/addons/controls/DragControls.js';
 // --- Konstanten ---
 const GRAVITY = 9.81; // Erdbeschleunigung m/s^2
 const TRAVERSE_MODEL_LENGTH = 3.0; // Feste Länge des Traversenmodells (z.B. 3 Meter)
-const TRAVERSE_MODEL_HEIGHT = 0.29; // Typische F34-Masse: 29cm
-const TRAVERSE_MODEL_WIDTH = 0.29;  // Typische F34-Masse: 29cm
+const TRAVERSE_MODEL_HEIGHT = 0.29; // Typische F34-Masse: 29cm x 29cm
+const TRAVERSE_MODEL_WIDTH = 0.29;  // Typische F34-Masse: 29cm x 29cm
 const TRAVERSE_WEIGHT_PER_METER = 10; // kg/m - Beispielgewicht für Traverse
-const LOAD_POINT_OFFSET_Y = -0.5; // Wie weit der Lastpunkt unter der Traverse hängt (Y-Offset in Weltkoordinaten)
-// ATTACH_POINT_VERTICAL_OFFSET und ATTACH_POINT_LATERAL_OFFSET bleiben gleich,
-// da sie sich auf die halbe Höhe/Breite der Traverse beziehen und die Punkte
-// direkt an den Chords (Hauptstreben) positionieren.
-const ATTACH_POINT_VERTICAL_OFFSET = TRAVERSE_MODEL_HEIGHT / 2;
-const ATTACH_POINT_LATERAL_OFFSET = TRAVERSE_MODEL_WIDTH / 2;
+const LOAD_POINT_OFFSET_Y = -0.5; // Wie weit der Lastpunkt unter der Traverse hängt (in Weltkoordinaten)
+
+// Lokale Offsets für die Positionen der 4 Chords (Hauptstreben) relativ zum Traversen-Mittelpunkt (0,0,0)
+const CHORD_OFFSETS = [
+    { y: TRAVERSE_MODEL_HEIGHT / 2, z: TRAVERSE_MODEL_WIDTH / 2, name: "Oben Vorne" },
+    { y: TRAVERSE_MODEL_HEIGHT / 2, z: -TRAVERSE_MODEL_WIDTH / 2, name: "Oben Hinten" },
+    { y: -TRAVERSE_MODEL_HEIGHT / 2, z: TRAVERSE_MODEL_WIDTH / 2, name: "Unten Vorne" },
+    { y: -TRAVERSE_MODEL_HEIGHT / 2, z: -TRAVERSE_MODEL_WIDTH / 2, name: "Unten Hinten" }
+];
 
 // --- Szene-Setup ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const infoPanel = document.getElementById('info-panel');
-const threeContainer = document.getElementById('three-container');
+const threeContainer = document.getElementById('three-container'); // Ref auf das Div für Three.js
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setClearColor(0x000000, 0); // Transparenter Hintergrund
@@ -56,14 +58,8 @@ let ceilingAnchors = []; // Array für Deckenanker
 let traverseAttachPoints = []; // Array für Anschlagpunkte an der Traverse
 let loadPoints = []; // Array für Lastpunkte
 
-// Initialpositionen - diese sind jetzt nur Startwerte für die dynamischen Punkte
-const initialPositions = {
-    // Traverse Endpunkte - Diese definieren die Position und Ausrichtung des Modells
-    traverseEndPoint1: new THREE.Vector3(-TRAVERSE_MODEL_LENGTH / 2, 2, 0),
-    traverseEndPoint2: new THREE.Vector3(TRAVERSE_MODEL_LENGTH / 2, 2, 0),
-};
 
-// 3D-Modell der Traverse (Aktualisierte Funktion für F34-Optik)
+// 3D-Modell der Traverse
 let traverseModel;
 function createTraverseModel(length, height, width) {
     const group = new THREE.Group();
@@ -80,43 +76,31 @@ function createTraverseModel(length, height, width) {
     chordGeometry.rotateZ(Math.PI / 2); // Entlang der X-Achse ausrichten
 
     // Positionen der 4 Chords
-    const chordPositions = [
-        new THREE.Vector3(0, height / 2, width / 2),
-        new THREE.Vector3(0, height / 2, -width / 2),
-        new THREE.Vector3(0, -height / 2, width / 2),
-        new THREE.Vector3(0, -height / 2, -width / 2)
-    ];
-
-    chordPositions.forEach(pos => {
+    CHORD_OFFSETS.forEach(offset => {
         let chord = new THREE.Mesh(chordGeometry, chordMaterial);
-        chord.position.copy(pos);
+        chord.position.set(0, offset.y, offset.z); // Position relativ zum Gruppenmittelpunkt
         group.add(chord);
     });
 
     // 2. Horizontale und Diagonale Verstrebungen (Spindeln)
     for (let i = 0; i <= numSegments; i++) {
         const xPos = -length / 2 + i * segmentSpan;
-        const nextXPos = -length / 2 + (i + 1) * segmentSpan;
-        const midXPos = xPos + segmentSpan / 2;
+        const midXPos = -length / 2 + (i * segmentSpan) + segmentSpan / 2;
 
-        // Vertikale Streben (an den Segmentenden, falls 4-Punkt mit vertikalen Beinen)
-        // Hier in F34 meist durch Chords und Diagonale gelöst, aber zur Vollständigkeit
-        // kann man am Anfang und Ende kleine Vertikalen hinzufügen, die die Chords verbinden.
+        // Vertikale Verbindungen an den Enden der Segmente (wenn i==0 oder i==numSegments)
         if (i === 0 || i === numSegments) {
-            // An den Enden vertikale Verbindungen
             const verticalBarGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, height, 8);
             verticalBarGeom.rotateX(Math.PI / 2); // Entlang Y-Achse
-            let bar;
+            const horizontalDepthBarGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, width, 8);
+            horizontalDepthBarGeom.rotateY(Math.PI / 2); // Entlang Z-Achse
 
-            // Verbindungen zwischen oberen und unteren Chords (vorne/hinten)
-            bar = new THREE.Mesh(verticalBarGeom, spindleMaterial);
+            // Vertikale Verbindungen zwischen oberen und unteren Chords (vorne/hinten)
+            let bar = new THREE.Mesh(verticalBarGeom, spindleMaterial);
             bar.position.set(xPos, 0, width / 2); group.add(bar);
             bar = new THREE.Mesh(verticalBarGeom, spindleMaterial);
             bar.position.set(xPos, 0, -width / 2); group.add(bar);
 
-            // Verbindungen zwischen vorne/hinten Chords (oben/unten)
-            const horizontalDepthBarGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, width, 8);
-            horizontalDepthBarGeom.rotateY(Math.PI / 2); // Entlang Z-Achse
+            // Horizontale Verbindungen zwischen vorne/hinten Chords (oben/unten)
             bar = new THREE.Mesh(horizontalDepthBarGeom, spindleMaterial);
             bar.position.set(xPos, height / 2, 0); group.add(bar);
             bar = new THREE.Mesh(horizontalDepthBarGeom, spindleMaterial);
@@ -124,12 +108,11 @@ function createTraverseModel(length, height, width) {
         }
 
         if (i < numSegments) { // Horizontale und diagonale Verstrebungen innerhalb der Segmente
-            // Horizontal connections between chords at the segment ends
+            // Horizontale Verbindungen zwischen Chords (oben/unten, vorne/hinten)
             const horizontalBarGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, segmentSpan, 8);
             horizontalBarGeom.rotateZ(Math.PI / 2); // Entlang X-Achse
+            
             let bar;
-
-            // Obere und untere Verbindungen
             bar = new THREE.Mesh(horizontalBarGeom, spindleMaterial);
             bar.position.set(midXPos, height / 2, width / 2); group.add(bar);
             bar = new THREE.Mesh(horizontalBarGeom, spindleMaterial);
@@ -139,53 +122,29 @@ function createTraverseModel(length, height, width) {
             bar = new THREE.Mesh(horizontalBarGeom, spindleMaterial);
             bar.position.set(midXPos, -height / 2, -width / 2); group.add(bar);
 
-            // Diagonal bracing (simplified for visual representation)
-            // Connects corners diagonally
+            // Diagonale Verstrebungen (Spindeln)
             const diagonalLength = Math.sqrt(segmentSpan * segmentSpan + height * height);
             const diagonalAngle = Math.atan2(height, segmentSpan);
             const diagonalSpindleGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, diagonalLength, 8);
 
-            // Diagonale in XY-Ebene (vorne und hinten)
-            // Startet an xPos, endet an nextXPos
-            // Vorderseite: von (xPos, -h/2, w/2) nach (nextXPos, h/2, w/2)
+            // Vorderseite: Oben links nach Unten rechts
             bar = new THREE.Mesh(diagonalSpindleGeom, spindleMaterial);
-            bar.position.set(xPos + segmentSpan / 2, 0, width / 2);
-            bar.rotation.z = diagonalAngle; group.add(bar);
-
-            // Vorderseite: von (xPos, h/2, w/2) nach (nextXPos, -h/2, w/2)
-            bar = new THREE.Mesh(diagonalSpindleGeom, spindleMaterial);
-            bar.position.set(xPos + segmentSpan / 2, 0, width / 2);
+            bar.position.set(midXPos, 0, width / 2);
             bar.rotation.z = -diagonalAngle; group.add(bar);
 
-            // Rückseite (gleiche Logik)
+            // Vorderseite: Oben rechts nach Unten links
             bar = new THREE.Mesh(diagonalSpindleGeom, spindleMaterial);
-            bar.position.set(xPos + segmentSpan / 2, 0, -width / 2);
+            bar.position.set(midXPos, 0, width / 2);
             bar.rotation.z = diagonalAngle; group.add(bar);
 
+            // Rückseite (analog)
             bar = new THREE.Mesh(diagonalSpindleGeom, spindleMaterial);
-            bar.position.set(xPos + segmentSpan / 2, 0, -width / 2);
+            bar.position.set(midXPos, 0, -width / 2);
             bar.rotation.z = -diagonalAngle; group.add(bar);
 
-
-            // Diagonalen in YZ-Ebene (zwischen Seitenflächen - dies ist der F34-Typ)
-            // Von (xPos, h/2, w/2) zu (nextXPos, -h/2, -w/2)
-            const diagonalCrossLength = Math.sqrt(segmentSpan * segmentSpan + height * height + width * width);
-            const diagonalCrossAngleX = Math.atan2(Math.sqrt(height*height + width*width), segmentSpan);
-            
-            const crossSpindleGeom = new THREE.CylinderGeometry(spindleRadius, spindleRadius, diagonalCrossLength, 8);
-            
-            // From TLF to BRB
-            let crossBar = new THREE.Mesh(crossSpindleGeom, spindleMaterial);
-            crossBar.position.set(midXPos, 0, 0);
-            crossBar.rotation.x = -Math.atan2(width, height); // Adjust for Z
-            crossBar.rotation.y = Math.PI / 2; // Point along X
-            crossBar.rotation.z = -Math.atan2(height, segmentSpan); // Adjust for Y
-            // Complex to get right with simple rotation. Better define start/end points.
-            // This is just a placeholder for the visual effect.
-
-            // The exact F34 diagonal pattern is more complex to generate procedurally with simple primitives.
-            // For a perfect representation, loading a pre-made 3D model would be ideal.
-            // However, this setup gives the characteristic skeletal look.
+            bar = new THREE.Mesh(diagonalSpindleGeom, spindleMaterial);
+            bar.position.set(midXPos, 0, -width / 2);
+            bar.rotation.z = diagonalAngle; group.add(bar);
         }
     }
 
@@ -193,24 +152,24 @@ function createTraverseModel(length, height, width) {
 }
 
 traverseModel = createTraverseModel(TRAVERSE_MODEL_LENGTH, TRAVERSE_MODEL_HEIGHT, TRAVERSE_MODEL_WIDTH);
+traverseModel.position.set(0, 2, 0); // Feste Position der Traverse im Raum
 scene.add(traverseModel);
 
 // Hilfsfunktion: Fügt einen Punkt zur Szene hinzu und macht ihn dragbar
-function addPoint(type, initialXLocalPos = 0) { // initialXLocalPos ist X-Koordinate relativ zur Traversenmitte
+// initialXPos: Welt-X für CeilingAnchor und TraverseAttachPoint. X-Offset relativ zur Traverse für LoadPoint.
+// initialChordIndex: Für TAP, welcher der 4 Chords (0-3)
+// connectedCaUuid: Für TAP, UUID des Deckenankers, mit dem er verbunden ist (Optional)
+function addPoint(type, initialXPos = 0, initialChordIndex = 0, connectedCaUuid = null) { 
     let mesh;
     let line = null;
     let idCounter = 0; 
-
-    // Die Positionierung muss in lokalen Koordinaten der Traverse erfolgen
-    let localPos = new THREE.Vector3(initialXLocalPos, 0, 0); // Startet auf der X-Achse der Traverse
 
     if (type === 'ceilingAnchor') {
         idCounter = ceilingAnchors.length + 1;
         mesh = new THREE.Mesh(new THREE.SphereGeometry(0.15), ceilingAnchorMaterial);
         mesh.userData.type = 'ceilingAnchor';
         mesh.userData.name = `Deckenanker ${idCounter}`;
-        // Setze initial an einer sinnvollen Weltposition, X kommt aus Parameter
-        mesh.position.set(initialXLocalPos, 4, 0); 
+        mesh.position.set(initialXPos, 4, 0); // initialXPos ist Welt-X für CA
         ceilingAnchors.push(mesh);
     } else if (type === 'traverseAttachPoint') {
         idCounter = traverseAttachPoints.length + 1;
@@ -220,14 +179,14 @@ function addPoint(type, initialXLocalPos = 0) { // initialXLocalPos ist X-Koordi
         line = new THREE.Line(new THREE.BufferGeometry(), lineMaterialMain); // Hauptseil
         mesh.userData.line = line;
         
-        // Z-Position für den Aufhängepunkt an der Traverse festlegen (wechselseitig)
-        mesh.userData.zSide = (traverseAttachPoints.length % 2 === 0) ? ATTACH_POINT_LATERAL_OFFSET : -ATTACH_POINT_LATERAL_OFFSET;
-        // Y-Position des Aufhängepunktes ist auf der Oberseite der Traverse
-        localPos.y = ATTACH_POINT_VERTICAL_OFFSET;
-        localPos.z = mesh.userData.zSide; // Z-Offset in lokalen Koordinaten
-        
-        // Wandle die lokale Position in eine Weltposition um
-        mesh.position.copy(localPos.applyMatrix4(traverseModel.matrixWorld));
+        mesh.userData.chordIndex = initialChordIndex % CHORD_OFFSETS.length; // Sicherstellen, dass Index gültig ist
+        mesh.userData.connectedCeilingAnchorUuid = connectedCaUuid; // Speichere die UUID des verbundenen CA
+
+        // Die initiale X-Position des TAPs wird direkt als Welt-X gesetzt,
+        // um die vertikale Ausrichtung zum Deckenanker zu gewährleisten.
+        mesh.position.x = initialXPos; 
+        mesh.position.y = traverseModel.position.y + CHORD_OFFSETS[mesh.userData.chordIndex].y;
+        mesh.position.z = traverseModel.position.z + CHORD_OFFSETS[mesh.userData.chordIndex].z;
 
         scene.add(line);
         traverseAttachPoints.push(mesh);
@@ -239,12 +198,10 @@ function addPoint(type, initialXLocalPos = 0) { // initialXLocalPos ist X-Koordi
         line = new THREE.Line(new THREE.BufferGeometry(), lineMaterialLoad); // Lastseil
         mesh.userData.line = line;
 
-        // Y-Offset nach unten für den Lastpunkt
-        localPos.y = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-        localPos.z = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-        // Wandle die lokale Position in eine Weltposition um
-        mesh.position.copy(localPos.applyMatrix4(traverseModel.matrixWorld));
-        mesh.position.y += LOAD_POINT_OFFSET_Y; // Zusätzlicher Y-Offset nach unten (Weltkoordinaten)
+        // Lastpunkt's X ist ein Offset relativ zum Traversen-Zentrum
+        mesh.position.x = traverseModel.position.x + initialXPos; // initialXPos ist relativer Offset für LP
+        mesh.position.y = traverseModel.position.y + LOAD_POINT_OFFSET_Y;
+        mesh.position.z = traverseModel.position.z; // Z-Position auf Mitte der Traverse
 
         scene.add(line);
         loadPoints.push(mesh);
@@ -264,17 +221,8 @@ function removePoint(type) {
     else if (type === 'loadPoint') array = loadPoints;
 
     if (array && array.length > 0) {
-        const lastPoint = array.pop();
-        scene.remove(lastPoint);
-        if (lastPoint.userData.line) {
-            lastPoint.userData.line.geometry.dispose(); // Geometrie freigeben
-            lastPoint.userData.line.material.dispose(); // Material freigeben
-            scene.remove(lastPoint.userData.line);
-        }
-        lastPoint.geometry.dispose(); // Geometrie des Mesh freigeben
-        lastPoint.material.dispose(); // Material des Mesh freigeben
-        updateDraggableObjects();
-        updateCalculations(); // Berechnungen und UI-Listen aktualisieren
+        const lastPoint = array[array.length - 1]; // Letzten Punkt nehmen
+        deletePointByUuid(lastPoint.uuid); // Und dann per UUID löschen, um Ressourcen freizugeben
     }
 }
 
@@ -326,45 +274,38 @@ function updateDraggableObjects() {
 
     dragControls.addEventListener('dragstart', (event) => {
         controls.enabled = false;
-        // Speichere die inverse Transformationsmatrix der Traverse ZU BEGINN des Drags
-        // Dies ist entscheidend, damit die Punkte auf der Traverse bleiben,
-        // auch wenn sich die Traverse selbst (durch Bewegen von TAPs) dreht.
-        if (event.object.userData.type === 'traverseAttachPoint' || event.object.userData.type === 'loadPoint') {
-            // Speichere die lokale Position des Punktes auf der Traverse
-            event.object.userData.initialLocalTraversePos = event.object.position.clone().applyMatrix4(traverseModel.matrixWorld.clone().invert());
-        }
     });
     dragControls.addEventListener('drag', (event) => {
-        if (event.object.userData.type === 'traverseAttachPoint' || event.object.userData.type === 'loadPoint') {
-            // Die neue Position in Weltkoordinaten
-            const newWorldPos = event.object.position.clone();
+        const draggedObject = event.object;
+
+        if (draggedObject.userData.type === 'traverseAttachPoint') {
+            // Nur die X-Koordinate des TAPs ist frei verschiebbar entlang der Traverse
+            let newXWorld = draggedObject.position.x;
+            // Begrenze X auf die Länge der Traverse (in Weltkoordinaten, relativ zur Traversenmitte)
+            newXWorld = Math.max(traverseModel.position.x - TRAVERSE_MODEL_LENGTH / 2, 
+                                 Math.min(traverseModel.position.x + TRAVERSE_MODEL_LENGTH / 2, newXWorld));
             
-            // Konvertiere die neue Weltposition zurück in das lokale Koordinatensystem der Traverse
-            // Verwende die INVERSE Matrix der Traverse ZUM ZEITPUNKT DES DRAGS
-            const currentTraverseInverseMatrix = traverseModel.matrixWorld.clone().invert();
-            const newLocalPos = newWorldPos.applyMatrix4(currentTraverseInverseMatrix);
+            draggedObject.position.x = newXWorld;
+            // Y und Z sind durch den ausgewählten Chord fest definiert
+            draggedObject.position.y = traverseModel.position.y + CHORD_OFFSETS[draggedObject.userData.chordIndex].y;
+            draggedObject.position.z = traverseModel.position.z + CHORD_OFFSETS[draggedObject.userData.chordIndex].z;
 
-            // Beschränke X auf die Länge der Traverse (im lokalen Koordinatensystem)
-            newLocalPos.x = Math.max(-TRAVERSE_MODEL_LENGTH / 2, Math.min(TRAVERSE_MODEL_LENGTH / 2, newLocalPos.x));
+        } else if (draggedObject.userData.type === 'loadPoint') {
+            // Nur die X-Koordinate des LoadPoints ist frei verschiebbar entlang der Traverse
+            let newXWorld = draggedObject.position.x;
+            // Begrenze X auf die Länge der Traverse (in Weltkoordinaten, relativ zur Traversenmitte)
+            newXWorld = Math.max(traverseModel.position.x - TRAVERSE_MODEL_LENGTH / 2, 
+                                 Math.min(traverseModel.position.x + TRAVERSE_MODEL_LENGTH / 2, newXWorld));
+            
+            draggedObject.position.x = newXWorld;
+            // Y und Z sind fest definiert (Mitte der Traverse + Offset)
+            draggedObject.position.y = traverseModel.position.y + LOAD_POINT_OFFSET_Y;
+            draggedObject.position.z = traverseModel.position.z; // Z-Position auf Mitte der Traverse
+            
 
-            // Y und Z Positionen relativ zur Traverse beibehalten
-            if (event.object.userData.type === 'traverseAttachPoint') {
-                newLocalPos.y = ATTACH_POINT_VERTICAL_OFFSET;
-                newLocalPos.z = event.object.userData.zSide; // Behält die Z-Seite bei
-            } else if (event.object.userData.type === 'loadPoint') {
-                newLocalPos.y = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-                newLocalPos.z = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-            }
-
-            // Konvertiere die lokale, beschränkte Position zurück in Weltkoordinaten
-            // Verwende die AKTUELLE Matrix der Traverse
-            event.object.position.copy(newLocalPos.applyMatrix4(traverseModel.matrixWorld));
-
-            // Füge den globalen Y-Offset für Lastpunkte hinzu
-            if (event.object.userData.type === 'loadPoint') {
-                event.object.position.y += LOAD_POINT_OFFSET_Y;
-            }
-
+        } else if (draggedObject.userData.type === 'ceilingAnchor') {
+            // Deckenanker können sich frei bewegen
+            // Ihre Position ist bereits die Weltposition
         }
         updateCalculations(); // Berechnungen und UI-Listen aktualisieren
     });
@@ -396,36 +337,59 @@ const loadPointsListDiv = document.getElementById('load-points-list');
 
 // --- Initialisiere mit einigen Standardpunkten ---
 // Diese Aufrufe müssen NACH der Initialisierung von dragControls und den UI-Elementen erfolgen.
-// Füge Punkte an sinnvollen X-Positionen entlang der Traverse hinzu
-addPoint('ceilingAnchor', 0); // Zentral
-addPoint('ceilingAnchor', 2); // Rechts
-addPoint('traverseAttachPoint', -TRAVERSE_MODEL_LENGTH / 4); // Links der Mitte
-addPoint('traverseAttachPoint', TRAVERSE_MODEL_LENGTH / 4);  // Rechts der Mitte
-addPoint('loadPoint', 0); // Zentral
+// Feste Initialpunkte:
+let initialCA1 = addPoint('ceilingAnchor', traverseModel.position.x - 1); // CA1 Welt-X
+let initialCA2 = addPoint('ceilingAnchor', traverseModel.position.x + 1); // CA2 Welt-X
+
+// TAPs für CA1:
+// Jetzt wird die Welt-X-Position des CA übergeben, um die vertikale Ausrichtung zu gewährleisten
+addPoint('traverseAttachPoint', initialCA1.position.x, 0, initialCA1.uuid); // TAP1 (Oben Vorne, X ausgerichtet an CA1)
+addPoint('traverseAttachPoint', initialCA1.position.x, 1, initialCA1.uuid); // TAP2 (Oben Hinten, X ausgerichtet an CA1)
+
+// TAPs für CA2:
+addPoint('traverseAttachPoint', initialCA2.position.x, 0, initialCA2.uuid);  // TAP3 (Oben Vorne, X ausgerichtet an CA2)
+addPoint('traverseAttachPoint', initialCA2.position.x, 1, initialCA2.uuid);  // TAP4 (Oben Hinten, X ausgerichtet an CA2)
+
+addPoint('loadPoint', 0); // Zentraler Lastpunkt (X-Offset 0)
 
 
 // --- UI-Events ---
-addCeilingAnchorButton.addEventListener('click', () => addPoint('ceilingAnchor', 0)); // Fügt an Default-Position hinzu
+addCeilingAnchorButton.addEventListener('click', () => addPoint('ceilingAnchor', traverseModel.position.x)); 
 removeCeilingAnchorButton.addEventListener('click', () => removePoint('ceilingAnchor'));
-addTraverseAttachPointButton.addEventListener('click', () => addPoint('traverseAttachPoint', 0)); // Fügt an Default-Position hinzu
+addTraverseAttachPointButton.addEventListener('click', () => {
+    // Wenn ein neuer TAP hinzugefügt wird, standardmässig den ersten Deckenanker zuweisen
+    // und dessen X-Position für die initiale TAP-Position verwenden.
+    let defaultCaUuid = null;
+    let initialXForNewTAP = traverseModel.position.x; // Fallback, wenn keine CAs vorhanden
+
+    if (ceilingAnchors.length > 0) {
+        defaultCaUuid = ceilingAnchors[0].uuid;
+        initialXForNewTAP = ceilingAnchors[0].position.x; // X-Position des ersten CA
+    }
+    // initialXForNewTAP ist jetzt eine Welt-X-Koordinate
+    addPoint('traverseAttachPoint', initialXForNewTAP, 0, defaultCaUuid); // Chord 0 ist Standard
+}); 
 removeTraverseAttachPointButton.addEventListener('click', () => removePoint('traverseAttachPoint'));
-addLoadPointButton.addEventListener('click', () => addPoint('loadPoint', 0)); // Fügt an Default-Position hinzu
+addLoadPointButton.addEventListener('click', () => addPoint('loadPoint', 0)); 
 removeLoadPointButton.addEventListener('click', () => removePoint('loadPoint'));
 
 loadMassInput.addEventListener('input', updateCalculations);
 
 resetButton.addEventListener('click', () => {
     // Alle Punkte entfernen
-    while (ceilingAnchors.length > 0) deletePointByUuid(ceilingAnchors[0].uuid);
-    while (traverseAttachPoints.length > 0) deletePointByUuid(traverseAttachPoints[0].uuid);
-    while (loadPoints.length > 0) deletePointByUuid(loadPoints[0].uuid);
+    [...ceilingAnchors].forEach(p => deletePointByUuid(p.uuid));
+    [...traverseAttachPoints].forEach(p => deletePointByUuid(p.uuid));
+    [...loadPoints].forEach(p => deletePointByUuid(p.uuid));
 
-    // Initialpunkte wieder hinzufügen
-    addPoint('ceilingAnchor', 0);
-    addPoint('ceilingAnchor', 2);
-    addPoint('traverseAttachPoint', -TRAVERSE_MODEL_LENGTH / 4);
-    addPoint('traverseAttachPoint', TRAVERSE_MODEL_LENGTH / 4);
-    addPoint('loadPoint', 0);
+    // Initialpunkte wieder hinzufügen, angepasst an die neue Logik
+    const newInitialCA1 = addPoint('ceilingAnchor', traverseModel.position.x - 1);
+    const newInitialCA2 = addPoint('ceilingAnchor', traverseModel.position.x + 1);
+    
+    addPoint('traverseAttachPoint', newInitialCA1.position.x, 0, newInitialCA1.uuid); 
+    addPoint('traverseAttachPoint', newInitialCA1.position.x, 1, newInitialCA1.uuid); 
+    addPoint('traverseAttachPoint', newInitialCA2.position.x, 0, newInitialCA2.uuid);  
+    addPoint('traverseAttachPoint', newInitialCA2.position.x, 1, newInitialCA2.uuid);  
+    addPoint('loadPoint', 0); // 0 ist Offset für Lastpunkt
 
     updateCalculations();
 });
@@ -438,78 +402,42 @@ sidebarToggleBtn.addEventListener('click', () => {
 
 // --- Berechnungs-Hauptfunktion ---
 function updateCalculations() {
-    // Traverse-Modell ausrichten
-    // Der Mittelpunkt der Traverse wird als Referenzpunkt für die Positionierung des Modells verwendet.
-    // Wenn es Aufhängepunkte gibt, nutze deren Mittelpunkt. Sonst default.
-    let currentTraverseMid = new THREE.Vector3(0, initialPositions.traverseEndPoint1.y, 0); // Default, wenn keine TAPs
-    if (traverseAttachPoints.length > 0) {
-        currentTraverseMid.set(0,0,0);
-        traverseAttachPoints.forEach(tap => currentTraverseMid.add(tap.position));
-        currentTraverseMid.divideScalar(traverseAttachPoints.length);
-    }
-    traverseModel.position.copy(currentTraverseMid);
-    
-    // Ausrichtung der Traverse basierend auf den Aufhängepunkten
-    if (traverseAttachPoints.length >= 2) {
-        // Die Traverse soll entlang der Linie zwischen dem ersten und letzten Aufhängepunkt ausgerichtet werden
-        const p1 = traverseAttachPoints[0].position;
-        const pLast = traverseAttachPoints[traverseAttachPoints.length - 1].position;
-        
-        const traverseVec = new THREE.Vector3().subVectors(pLast, p1);
-        const initialTraverseDirection = new THREE.Vector3(1, 0, 0); // Modell ist initial entlang der X-Achse ausgerichtet
-        const currentTraverseDirection = traverseVec.clone().normalize();
+    // Traverse-Modell ist jetzt fest positioniert und rotiert nicht (wird einmal gesetzt in der Initialisierung)
+    // -> Keine Anpassungen der traverseModel.position oder rotation hier
 
-        const angle = initialTraverseDirection.angleTo(currentTraverseDirection);
-        const axis = new THREE.Vector3().crossVectors(initialTraverseDirection, currentTraverseDirection).normalize();
-        
-        if (axis.lengthSq() < 1e-6) { // Wenn Vektoren parallel oder entgegengesetzt sind (Achse ist null)
-            if (currentTraverseDirection.x < 0) { // 180 Grad Drehung
-                traverseModel.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), Math.PI); // Um Y-Achse
-            } else { // Keine Drehung (0 Grad)
-                traverseModel.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), 0);
-            }
-        } else {
-            traverseModel.quaternion.setFromAxisAngle(axis, angle); 
+    // Seile zwischen TAPs und CAs basierend auf userData.connectedCeilingAnchorUuid verbinden
+    let connectedRopesCount = 0; // Zähler für tatsächlich verbundene Seile
+
+    traverseAttachPoints.forEach(tap => {
+        let connectedCa = null;
+        if (tap.userData.connectedCeilingAnchorUuid) {
+            // Finde den Deckenanker anhand der UUID
+            connectedCa = ceilingAnchors.find(ca => ca.uuid === tap.userData.connectedCeilingAnchorUuid);
         }
+        
+        tap.userData.connectedCeilingAnchor = connectedCa; // Speichern der Referenz zum Objekt
 
-    } else {
-        // Wenn weniger als 2 Anschlagpunkte, bleibt Traverse an initialer Position/Ausrichtung
-        traverseModel.quaternion.set(0,0,0,1); // Keine Rotation
-    }
-    traverseModel.scale.x = 1; // Sicherstellen, dass Skalierung nicht verzerrt
-
-    // Linien aktualisieren: Deckenanker zu Traversen-Aufhängepunkten
-    traverseAttachPoints.forEach((tap) => {
-        // Finden des nächstgelegenen Deckenankers für die Linie (statt index-basierter Kopplung)
-        let closestCeilingAnchor = null;
-        let minDist = Infinity;
-        ceilingAnchors.forEach(ca => {
-            const dist = tap.position.distanceTo(ca.position);
-            if (dist < minDist) {
-                minDist = dist;
-                closestCeilingAnchor = ca;
-            }
-        });
-
-        if (closestCeilingAnchor) {
-            tap.userData.line.geometry.setFromPoints([closestCeilingAnchor.position, tap.position]);
-            tap.userData.connectedCeilingAnchor = closestCeilingAnchor; // Speichern der Verbindung
+        if (connectedCa) {
+            tap.userData.line.geometry.setFromPoints([connectedCa.position, tap.position]);
+            connectedRopesCount++;
         } else {
-            tap.userData.line.geometry.setFromPoints([tap.position, tap.position]); // Linie auf Null setzen
-            tap.userData.connectedCeilingAnchor = null;
+            // Wenn kein verbundener CA gefunden wurde, Linie auf Null setzen und Farbe grau
+            tap.userData.line.geometry.setFromPoints([tap.position, tap.position]); 
+            tap.userData.line.material.color.setHex(0x888888); // Grau für unverbundene Seile
         }
     });
 
     // Lastpunkt-Linien aktualisieren
     loadPoints.forEach(lp => {
         // Die Linie soll vom Lastpunkt zum Punkt auf der Traverse direkt über ihm gehen
-        const lpConnectionPointOnTraverse = lp.position.clone().sub(new THREE.Vector3(0, LOAD_POINT_OFFSET_Y, 0));
+        const lpConnectionPointOnTraverse = lp.position.clone();
+        lpConnectionPointOnTraverse.y -= LOAD_POINT_OFFSET_Y; // Entferne den Offset, um auf die Traversenebene zu kommen
         lp.userData.line.geometry.setFromPoints([lp.position, lpConnectionPointOnTraverse]);
     });
 
-    calculateAndDisplayForces();
+    calculateAndDisplayForces(connectedRopesCount); // Anzahl der tatsächlich verbundenen Seile übergeben
     updateUIListings(); // Punkte in der Sidebar aktualisieren
-    updateVisualFeedback(); 
+    // updateVisualFeedback(); wird von calculateAndDisplayForces aufgerufen
 }
 
 // --- Update UI Listings Funktion (NEU) ---
@@ -532,13 +460,13 @@ function updateUIListings() {
         pointName.textContent = point.userData.name;
         headerDiv.appendChild(pointName);
 
-        // NEU: Löschen-Button
+        // Löschen-Button
         const deleteButton = document.createElement('button');
         deleteButton.className = 'delete-button';
-        deleteButton.textContent = '✖'; // Oder ein Icon, z.B. &#10006;
+        deleteButton.textContent = '✖'; 
         deleteButton.title = `Lösche ${point.userData.name}`;
         deleteButton.addEventListener('click', () => {
-            deletePointByUuid(point.uuid); // Verwende die UUID des 3D-Punkts zum Löschen
+            deletePointByUuid(point.uuid); 
         });
         headerDiv.appendChild(deleteButton);
 
@@ -548,23 +476,32 @@ function updateUIListings() {
         const coordsDiv = document.createElement('div');
         coordsDiv.className = 'coordinates-inputs';
 
+        // Für jeden Punkt: X, Y, Z Koordinaten-Inputs
         ['x', 'y', 'z'].forEach(axis => {
+            const wrapperDiv = document.createElement('div'); // Wrapper für Label und Input
             const label = document.createElement('label');
             label.textContent = `${axis.toUpperCase()}:`;
             
             const input = document.createElement('input');
             input.type = 'number';
             input.step = '0.01'; // Feinere Steuerung der Positionen
-            input.value = point.position[axis].toFixed(2);
+            input.value = point.position[axis].toFixed(2); // Zeigt Weltkoordinaten
             input.dataset.axis = axis; // Speichern der Achse im Dataset
             input.dataset.pointUuid = point.uuid; // Speichern der UUID des 3D-Punkts
+
+            // Setze Y und Z für TAPs und LPs als readonly, da sie durch die Traverse/Chords bestimmt werden
+            if (point.userData.type === 'traverseAttachPoint' || point.userData.type === 'loadPoint') {
+                if (axis === 'y' || axis === 'z') {
+                    input.readOnly = true;
+                    input.classList.add('readonly-input');
+                }
+            }
 
             input.addEventListener('input', (event) => {
                 const targetAxis = event.target.dataset.axis;
                 const newVal = parseFloat(event.target.value);
-                // Finde den richtigen 3D-Punkt anhand der UUID
+                
                 let targetPoint = null;
-                // Durchlaufe alle Punkt-Arrays, um den Punkt zu finden
                 const allPoints = [...ceilingAnchors, ...traverseAttachPoints, ...loadPoints];
                 for(const p of allPoints) {
                     if (p.uuid === event.target.dataset.pointUuid) {
@@ -574,60 +511,116 @@ function updateUIListings() {
                 }
 
                 if (targetPoint && !isNaN(newVal)) {
-                    // Spezielle Logik für traverseAttachPoint und loadPoint
                     if (targetPoint.userData.type === 'traverseAttachPoint' || targetPoint.userData.type === 'loadPoint') {
-                        // Für Punkte auf der Traverse:
-                        // Wir müssen die Eingabe in lokale Koordinaten der Traverse umwandeln,
-                        // dann beschränken, dann zurück in Weltkoordinaten.
-                        const currentWorldPos = targetPoint.position.clone();
-                        // Temporär den Offset entfernen, um auf der Traverse zu arbeiten
-                        if (targetPoint.userData.type === 'loadPoint') {
-                            currentWorldPos.y -= LOAD_POINT_OFFSET_Y;
+                        // Für Punkte auf der Traverse: Nur X-Position ändern
+                        if (targetAxis === 'x') {
+                            // newVal ist die absolute X-Weltkoordinate aus dem Input
+                            // Begrenze auf Traversenlänge (Weltkoordinaten)
+                            let newXWorld = newVal; 
+                            newXWorld = Math.max(traverseModel.position.x - TRAVERSE_MODEL_LENGTH / 2, 
+                                                 Math.min(traverseModel.position.x + TRAVERSE_MODEL_LENGTH / 2, newXWorld));
+                            targetPoint.position.x = newXWorld;
                         }
-
-                        // Verwende die aktuelle inverse Matrix der Traverse
-                        const currentTraverseInverseMatrix = traverseModel.matrixWorld.clone().invert();
-                        const localPos = currentWorldPos.applyMatrix4(currentTraverseInverseMatrix);
-                        
-                        // Ändere die lokale Koordinate basierend auf Input
-                        localPos[targetAxis] = newVal; 
-
-                        // Beschränke X wieder auf die Traversenlänge
-                        localPos.x = Math.max(-TRAVERSE_MODEL_LENGTH / 2, Math.min(TRAVERSE_MODEL_LENGTH / 2, localPos.x));
-                        
-                        // Y und Z sind relativ zur Traverse fixiert für diese Punkte
-                        if (targetPoint.userData.type === 'traverseAttachPoint') {
-                            // Wenn Y oder Z geändert werden soll, aber der Punkt an der Traverse gebunden ist,
-                            // ignorieren wir die Eingabe für Y und Z, da sie durch die Traverse bestimmt werden.
-                            // Ausnahme: wenn man die Z-Seite wechseln will, müsste man das hier erlauben.
-                            // Für jetzt: Y und Z bleiben fest relativ zur Traverse.
-                            localPos.y = ATTACH_POINT_VERTICAL_OFFSET;
-                            localPos.z = targetPoint.userData.zSide; // Behält die Z-Seite bei
-                        } else if (targetPoint.userData.type === 'loadPoint') {
-                            localPos.y = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-                            localPos.z = 0; // Lastpunkt ist auf der Mittelebene der Traverse (lokal)
-                        }
-
-                        // Konvertiere die lokale, beschränkte Position zurück in Weltkoordinaten
-                        // Verwende die AKTUELLE Matrix der Traverse
-                        targetPoint.position.copy(localPos.applyMatrix4(traverseModel.matrixWorld));
-
-                        // Y-Offset wieder anwenden für Lastpunkte
-                        if (targetPoint.userData.type === 'loadPoint') {
-                            targetPoint.position.y += LOAD_POINT_OFFSET_Y;
-                        }
-
-                    } else {
-                        // Für normale (Decken-)Ankerpunkte: direkt die Weltkoordinaten setzen
+                        // Y und Z werden durch Drag/Chord-Auswahl gesetzt, nicht durch direkte Eingabe
+                    } else { // CeilingAnchor
                         targetPoint.position[targetAxis] = newVal;
                     }
+                    updateCalculations(); 
+                }
+            });
+            wrapperDiv.appendChild(label);
+            wrapperDiv.appendChild(input);
+            coordsDiv.appendChild(wrapperDiv);
+        });
+
+        // Dropdown für Chord-Auswahl nur für TraverseAttachPoints
+        if (point.userData.type === 'traverseAttachPoint') {
+            const chordSelectDiv = document.createElement('div');
+            chordSelectDiv.className = 'chord-select-group'; 
+            const chordLabel = document.createElement('label');
+            chordLabel.textContent = 'Chord:';
+            chordSelectDiv.appendChild(chordLabel);
+
+            const chordSelect = document.createElement('select');
+            chordSelect.className = 'chord-select';
+            CHORD_OFFSETS.forEach((offset, idx) => {
+                const option = document.createElement('option');
+                option.value = idx;
+                option.textContent = offset.name;
+                chordSelect.appendChild(option);
+            });
+            chordSelect.value = point.userData.chordIndex; // Aktuellen Chord auswählen
+            chordSelect.dataset.pointUuid = point.uuid; // UUID zum Zuordnen
+
+            chordSelect.addEventListener('change', (event) => {
+                const targetPointUuid = event.target.dataset.pointUuid;
+                let targetPoint = null;
+                for(const p of traverseAttachPoints) {
+                    if (p.uuid === targetPointUuid) {
+                        targetPoint = p;
+                        break;
+                    }
+                }
+
+                if (targetPoint) {
+                    const newChordIndex = parseInt(event.target.value);
+                    targetPoint.userData.chordIndex = newChordIndex;
+                    // Position des TAP basierend auf neuem Chord-Index aktualisieren
+                    // X-Koordinate bleibt wie sie ist (Weltkoordinate)
+                    targetPoint.position.y = traverseModel.position.y + CHORD_OFFSETS[newChordIndex].y;
+                    targetPoint.position.z = traverseModel.position.z + CHORD_OFFSETS[newChordIndex].z;
+                    updateCalculations();
+                }
+            });
+            chordSelectDiv.appendChild(chordSelect);
+            coordsDiv.appendChild(chordSelectDiv); 
+
+            // Dropdown für Deckenanker-Auswahl
+            const caSelectDiv = document.createElement('div');
+            caSelectDiv.className = 'ca-select-group';
+            const caLabel = document.createElement('label');
+            caLabel.textContent = 'Deckenanker:';
+            caSelectDiv.appendChild(caLabel);
+
+            const caSelect = document.createElement('select');
+            caSelect.className = 'ca-select';
+            
+            // Füge eine "Nicht verbunden" Option hinzu
+            const noCaOption = document.createElement('option');
+            noCaOption.value = ''; // Leerer Wert für nicht verbunden
+            noCaOption.textContent = 'Nicht verbunden';
+            caSelect.appendChild(noCaOption);
+
+            // Füge alle vorhandenen Deckenanker als Optionen hinzu
+            ceilingAnchors.forEach(ca => {
+                const option = document.createElement('option');
+                option.value = ca.uuid; // Wert ist die UUID des Deckenankers
+                option.textContent = ca.userData.name;
+                caSelect.appendChild(option);
+            });
+            // Wähle den aktuell verbundenen Deckenanker aus
+            caSelect.value = point.userData.connectedCeilingAnchorUuid || ''; // Setze auf leeren String, wenn nicht verbunden
+            caSelect.dataset.pointUuid = point.uuid; // UUID des TAP zum Zuordnen
+
+            caSelect.addEventListener('change', (event) => {
+                const targetPointUuid = event.target.dataset.pointUuid;
+                let targetPoint = null;
+                for(const p of traverseAttachPoints) {
+                    if (p.uuid === targetPointUuid) {
+                        targetPoint = p;
+                        break;
+                    }
+                }
+
+                if (targetPoint) {
+                    targetPoint.userData.connectedCeilingAnchorUuid = event.target.value || null; // Speichere UUID oder null
                     updateCalculations(); // Alles neu berechnen und neu zeichnen
                 }
             });
+            caSelectDiv.appendChild(caSelect);
+            coordsDiv.appendChild(caSelectDiv);
+        }
 
-            coordsDiv.appendChild(label);
-            coordsDiv.appendChild(input);
-        });
         itemDiv.appendChild(coordsDiv);
         listDiv.appendChild(itemDiv);
     }
@@ -638,20 +631,25 @@ function updateUIListings() {
 }
 
 
-function calculateAndDisplayForces() {
+function calculateAndDisplayForces(connectedRopesCount) { // Nimmt jetzt die Anzahl der tatsächlich verbundenen Seile entgegen
     const loadMass = parseFloat(loadMassInput.value) || 0;
     const traverseWeight = TRAVERSE_MODEL_LENGTH * TRAVERSE_WEIGHT_PER_METER;
     const totalVerticalForce = (loadMass + traverseWeight) * GRAVITY; // Gesamte Last (Newton)
 
     totalTraverseLoadEl.textContent = `${totalVerticalForce.toFixed(2)} N`;
 
-    // Anzeige der Kräfte für jedes Seil
     forcesOutputDiv.innerHTML = ''; // Vorherige Ergebnisse löschen
 
-    const numActiveAttachPoints = traverseAttachPoints.length; 
-    const numActiveCeilingAnchors = ceilingAnchors.length;
+    // Finde die Anzahl der tatsächlich verbundenen Seile, die zur Lastaufnahme beitragen
+    let effectiveConnectedRopesCount = 0;
+    traverseAttachPoints.forEach(tap => {
+        if (tap.userData.connectedCeilingAnchor) {
+            effectiveConnectedRopesCount++;
+        }
+    });
 
-    if (numActiveAttachPoints === 0 || numActiveCeilingAnchors === 0) { 
+
+    if (effectiveConnectedRopesCount === 0) { 
         forcesOutputDiv.innerHTML = '<p>Keine aktiven Seile zur Decke.</p>';
         // Setze alle TAP-Linien auf grau, falls vorhanden
         traverseAttachPoints.forEach(tap => {
@@ -662,11 +660,11 @@ function calculateAndDisplayForces() {
 
     // Vereinfachte Lastverteilung: Gesamtlast wird auf die vertikalen Anteile der Seile verteilt,
     // proportional zum Kosinus des Winkels zur Vertikalen.
-    // D.h., Seile, die näher an der Vertikalen sind, tragen einen proportional größeren Teil der Last.
     let sumOfCosines = 0;
     const verticalVector = new THREE.Vector3(0, 1, 0); // Vektor nach oben
 
     // Erste Iteration: Summe der Kosinusse aller verbundenen Seile berechnen
+    // Nur TAPs, die auch wirklich mit einem CA verbunden sind, tragen bei
     traverseAttachPoints.forEach(tap => {
         const ceilingAnchor = tap.userData.connectedCeilingAnchor;
         if (ceilingAnchor) {
@@ -676,11 +674,8 @@ function calculateAndDisplayForces() {
         }
     });
 
-    // Wenn keine Seile effektiv zur vertikalen Lastaufnahme beitragen (z.B. alle horizontal),
-    // oder wenn sumOfCosines sehr klein ist, um Division durch Null zu vermeiden.
     if (sumOfCosines < 1e-6) {
         forcesOutputDiv.innerHTML = '<p>Unbestimmter Lastfall oder keine tragenden Seile (Winkel zu horizontal).</p>';
-        // Alle Seile auf Rot setzen
         traverseAttachPoints.forEach(tap => {
             if(tap.userData.line) tap.userData.line.material.color.setHex(0xff0000);
         });
@@ -699,30 +694,27 @@ function calculateAndDisplayForces() {
         }
 
         const ropeVector = new THREE.Vector3().subVectors(ceilingAnchor.position, tap.position);
-        const angleToVertical = Math.abs(ropeVector.angleTo(verticalVector)); // Winkel zur Vertikalen (nach oben)
+        const angleToVertical = Math.abs(ropeVector.angleTo(verticalVector)); 
         
         let tension = 0;
         const cosineAngle = Math.cos(angleToVertical);
 
-        if (Math.abs(cosineAngle) > 1e-6) { // Vermeide Division durch Null
-            // Der vertikale Kraftbeitrag dieses Seils ist proportional zu seinem Kosinusanteil
+        if (Math.abs(cosineAngle) > 1e-6) { 
             const verticalForceContributionOfThisRope = (cosineAngle / sumOfCosines) * totalVerticalForce;
-            tension = verticalForceContributionOfThisRope / cosineAngle; // Tatsächliche Spannung im Seil
+            tension = verticalForceContributionOfThisRope / cosineAngle; 
         } else {
-            tension = Infinity; // Seil ist horizontal oder fast horizontal, führt zu unendlicher Spannung
+            tension = Infinity; 
         }
 
         const angleDeg = THREE.MathUtils.radToDeg(angleToVertical).toFixed(2);
         
-        // Dynamische Anzeige der Seilkräfte und Winkel
         const p = document.createElement('p');
         p.innerHTML = `<strong>Seil ${i + 1} (${tap.userData.name} zu ${ceilingAnchor.userData.name}):</strong> Kraft: ${tension.toFixed(2)} N, Winkel zur Vertikalen: ${angleDeg} °`;
         forcesOutputDiv.appendChild(p);
 
-        // Visuelles Feedback für jedes Seil
         let color = 0x00ff00; // Grün
-        if (angleDeg > 60) color = 0xff0000; // Rot (Winkel > 60 Grad ist ungünstig)
-        else if (angleDeg > 45) color = 0xffff00; // Gelb (Winkel > 45 Grad ist Vorsicht)
+        if (angleDeg > 60) color = 0xff0000; // Rot
+        else if (angleDeg > 45) color = 0xffff00; // Gelb
         tap.userData.line.material.color.setHex(color);
     });
 }
@@ -748,8 +740,10 @@ function animate() {
 }
 
 // Ersten Aufruf und Start
-onWindowResize(); // Setzt die Grösse initial
-// Initialpunkte hinzufügen. Die updateCalculations wird am Ende des addPoint aufgerufen.
-// Wenn alle Initialpunkte hinzugefügt sind, wird einmal updateCalculations am Ende aufgerufen.
+onWindowResize(); 
+
+addPoint('loadPoint', 0); // Zentraler Lastpunkt (X-Offset 0)
+
+
 updateCalculations();
 animate();
