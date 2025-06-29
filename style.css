@@ -9,7 +9,6 @@ body {
     color: #333;
     min-height: 100vh;
     background-color: #f8f8f8; /* Leichter Hintergrund */
-    /* overflow: hidden; ist hier WEG! */
 }
 
 /* Neuer Wrapper für das Haupt-Tool-Layout */
@@ -141,13 +140,9 @@ canvas {
     text-align: right;
 }
 
-/* Reset-Button Styling */
-#reset-button {
-    width: 100%;
+/* Allgemeine Button-Stile (werden von spezifischeren Klassen überschrieben) */
+button {
     padding: 12px 20px;
-    margin-top: auto; /* Schiebt den Button nach unten im Flex-Container */
-    background-color: #4a69bd; /* Akzentfarbe */
-    color: white;
     border: none;
     border-radius: 8px;
     font-size: 1.1em;
@@ -155,22 +150,75 @@ canvas {
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%; /* Default auf volle Breite, kann in controls-row überschrieben werden */
 }
 
-#reset-button:hover {
+/* Spezifische Button-Stile */
+.button-primary {
+    background-color: #4a69bd; /* Akzentfarbe */
+    color: white;
+}
+.button-primary:hover {
     background-color: #3b5090; /* Dunkler beim Hover */
     transform: translateY(-2px); /* Leichter Hoch-Effekt */
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
-
-#reset-button:active {
+.button-primary:active {
     transform: translateY(0); /* Zurück beim Klick */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.button-secondary {
+    background-color: #aa2224; /* Sekundäre Farbe (Rot) */
+    color: white;
+}
+.button-secondary:hover {
+    background-color: #991f22; /* Etwas dunkler beim Hover */
+    transform: translateY(-2px); /* Leichter Hoch-Effekt */
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+.button-secondary:active {
+    transform: translateY(0); /* Zurück beim Klick */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Anpassung für Button-Gruppen in controls-row */
+.controls-row {
+    display: flex;
+    flex-wrap: wrap; /* Erlaubt Zeilenumbruch bei kleinen Bildschirmen */
+    gap: 10px; /* Abstand zwischen den Buttons/Elementen */
+    margin-bottom: 10px; /* Abstand zwischen den Reihen */
+}
+.controls-row button {
+    flex: 1; /* Buttons füllen den verfügbaren Platz aus */
+    min-width: 120px; /* Mindestbreite, damit sie nicht zu klein werden */
+    width: auto; /* Überschreibt die 100% von oben, wenn in controls-row */
+}
+
+
+/* Reset-Button Styling - speziell, da er am Ende des info-panels liegt */
+#reset-button {
+    background-color: #6c757d; /* Grau, da es eine "Reset"-Funktion ist */
+    color: white;
+    margin-top: auto; /* Schiebt den Button nach unten im Flex-Container */
+    margin-bottom: 0; /* Kein zusätzlicher Margin-Bottom, da Footer direkt folgt */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Eigenen Schatten behalten */
+    width: 100%; /* Nimmt volle Breite im Footer ein */
+}
+#reset-button:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+#reset-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+
 /* Styling für den neuen App-Footer */
 .app-footer {
-    margin-top: 30px; /* Abstand nach oben */
+    margin-top: 20px; /* Abstand zum Reset-Button */
     padding-top: 20px;
     border-top: 1px solid #e0e0e0; /* Trennlinie */
     text-align: center;
@@ -194,7 +242,7 @@ canvas {
     text-decoration: underline;
 }
 
-/* Anpassung für den Footer in der Flexbox (damit er am Ende ist) */
+/* Anpassung des Footers in der Flexbox (damit er am Ende ist) */
 #info-panel footer {
     display: flex;
     flex-direction: column;
@@ -202,23 +250,247 @@ canvas {
     padding-top: 0; /* Keinen doppelten Padding */
 }
 
-/* Optional: Anpassung des Reset-Buttons, da er jetzt im Footer ist */
-#reset-button {
-    margin-bottom: 20px; /* Abstand zum Footer-Inhalt */
+/* Dynamische Kraftausgabe im forces-output Div */
+#forces-output p {
+    background-color: #e9f5ff; /* Leichter Hintergrund für Ergebniszeile */
+    border-left: 3px solid #4a69bd; /* Blauer Balken links */
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
+#forces-output p strong {
+    color: #2c3e50;
+}
+
+
+/* --- RECHTE SIDEBAR STYLING --- */
+#right-sidebar {
+    position: fixed; /* Fixed position relative to viewport */
+    top: 0;
+    right: 0;
+    width: 300px; /* Breite der Sidebar */
+    height: 100vh;
+    background-color: #ffffff; /* Heller Hintergrund für Sidebar */
+    box-shadow: -4px 0 12px rgba(0,0,0,0.15); /* Deutlicherer Schatten */
+    transform: translateX(100%); /* Start geschlossen (ausserhalb des Bildschirms) */
+    transition: transform 0.3s ease-out; /* Sanfte Übergangsanimation */
+    z-index: 100; /* Über anderem Inhalt */
+    display: flex;
+    flex-direction: row; /* Toggle Button links neben dem Inhalt */
+    overflow-y: hidden; /* Inhalte werden erst im content-div gescrollt */
+}
+
+#right-sidebar.sidebar-open {
+    transform: translateX(0); /* Offener Zustand */
+}
+
+.sidebar-toggle-button {
+    position: absolute;
+    left: -40px; /* Position des Buttons ausserhalb der Sidebar (auf ihrer linken Kante) */
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg); /* Pfeil-Rotation initial */
+    width: 40px;
+    height: 60px;
+    background-color: #4a69bd; /* Akzentfarbe */
+    color: white;
+    border: none;
+    border-radius: 8px 0 0 8px; /* Links abgerundete Ecken */
+    cursor: pointer;
+    font-size: 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 101; /* Über dem Sidebar-Inhalt */
+    transition: background-color 0.2s, transform 0.3s ease-out;
+}
+
+#right-sidebar.sidebar-open .sidebar-toggle-button {
+    transform: translateY(-50%) rotate(180deg); /* Pfeil dreht sich, wenn Sidebar offen ist */
+}
+
+.sidebar-toggle-button:hover {
+    background-color: #3b5090;
+}
+
+.sidebar-content {
+    flex-grow: 1;
+    padding: 20px;
+    overflow-y: auto; /* Hier wird der Inhalt gescrollt */
+}
+
+.sidebar-content h3 {
+    font-size: 1.5em;
+    color: #2c3e50;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 10px;
+}
+
+.point-category {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #e0e0e0;
+}
+.point-category:last-child { /* Letzte Kategorie hat keine Trennlinie unten */
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.point-category h4 {
+    font-size: 1.2em;
+    color: #4a69bd;
+    margin-bottom: 15px;
+}
+
+.point-item {
+    background-color: #fdfdfd;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    transition: box-shadow 0.2s ease;
+}
+.point-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.point-item-header { /* Für Name und Button nebeneinander */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.point-item .point-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 1em;
+    flex-grow: 1; /* Name nimmt verfügbaren Platz ein */
+}
+
+.point-item .coordinates-inputs {
+    display: flex;
+    flex-wrap: wrap; /* Erlaubt Umbruch auf sehr kleinen Bildschirmen */
+    margin-top: 5px; /* Abstand zwischen Name/Button und Koordinaten */
+    /* gap wird direkt auf den Elementen innen gesetzt */
+}
+
+.point-item .coordinates-inputs > div { /* Wrapper um Label und Input */
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Abstand zwischen Label und Input */
+    margin-bottom: 5px; /* Abstand zwischen den Koordinatenzeilen */
+}
+
+.point-item .coordinates-inputs label {
+    font-size: 0.85em;
+    color: #555;
+    min-width: 15px; /* Etwas Platz für Labels */
+}
+
+.point-item .coordinates-inputs input[type="number"] {
+    width: 60px; /* Kleine Inputfelder */
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #333;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.point-item .coordinates-inputs input[type="number"]:focus {
+    outline: none;
+    border-color: #4a69bd;
+    box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
+}
+
+.readonly-input { /* Stil für schreibgeschützte Inputfelder */
+    background-color: #e9e9e9;
+    color: #666;
+    cursor: not-allowed;
+    opacity: 0.7; /* Leichter verblassen */
+}
+.readonly-input:focus {
+    box-shadow: none;
+}
+
+
+/* Styling für den Löschen-Button in der Liste */
+.delete-button {
+    background-color: #dc3545; /* Rot */
+    color: white;
+    font-size: 0.8em; /* Kleinere Schrift */
+    width: 30px; /* Feste Breite und Höhe */
+    height: 30px;
+    padding: 0; /* Kein Padding */
+    border-radius: 50%; /* Rund */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    flex-shrink: 0; /* Verhindert, dass der Button schrumpft */
+    margin-left: 10px; /* Abstand zum Namen */
+}
+
+.delete-button:hover {
+    background-color: #c82333;
+    transform: scale(1.1); /* Leichter Zoom-Effekt */
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+.delete-button:active {
+    transform: scale(0.95);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+/* Styling für Chord-Auswahl-Dropdowns */
+.chord-select-group, .ca-select-group { /* NEU: ca-select-group hinzugefügt */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px; /* Abstand zu Koordinaten-Inputs */
+    width: 100%; /* Nimmt volle Breite ein */
+    flex-wrap: wrap; /* Wichtig für Responsivität */
+}
+
+.chord-select, .ca-select { /* NEU: ca-select hinzugefügt */
+    flex-grow: 1; /* Nimmt den restlichen Platz ein */
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+    background-color: #ffffff;
+    color: #333;
+    cursor: pointer;
+}
+
+.chord-select:focus, .ca-select:focus { /* NEU: ca-select hinzugefügt */
+    outline: none;
+    border-color: #4a69bd;
+    box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
+}
+
 
 /* --- Responsive Anpassungen mit Media Queries --- */
 
 @media (min-width: 768px) { /* Für Bildschirme ab 768px Breite (Desktop/Tablet-Querformat) */
     #app-layout-wrapper {
-        grid-template-columns: 350px 1fr; /* Linkes Panel 350px, rechter Bereich nimmt Rest */
+        grid-template-columns: 350px 1fr 300px; /* Info-panel, three.js, sidebar */
         grid-template-rows: 1fr; /* Nur eine Reihe */
     }
 
-    #info-panel {
-        width: 350px; /* Feste Breite durch Grid-Spalte */
-        height: 100vh; /* Panel nimmt volle Viewport-Höhe ein */
-        max-height: 100vh;
+    #right-sidebar {
+        position: relative; /* Nicht mehr fixed, sondern Teil des Grids */
+        transform: translateX(0); /* Immer offen auf Desktop */
+        box-shadow: -2px 0 8px rgba(0,0,0,0.05); /* Leichterer Schatten für integrierte Sidebar */
+    }
+
+    #right-sidebar .sidebar-toggle-button {
+        display: none; /* Toggle-Button auf Desktop ausblenden */
     }
 }
 
@@ -226,16 +498,13 @@ canvas {
     #info-panel {
         padding-bottom: 80px; /* Extra Platz für potentielles Überlappen mit Mobile-Browser-UI */
     }
-    .input-group .coordinates {
-        flex-direction: column; /* X, Y, Z untereinander auf sehr kleinen Bildschirmen */
-        align-items: flex-start;
+    /* Anpassen der Button-Breite für kleine Bildschirme */
+    .controls-row button {
+        flex-basis: calc(50% - 5px); /* Zwei Buttons pro Reihe mit etwas Abstand */
+        min-width: unset; /* Überschreibt min-width von oben */
     }
-    .input-group .coordinates label {
-        width: 100%; /* Label nimmt volle Breite ein */
-        margin-bottom: 5px;
-    }
-    .input-group .coordinates input {
-        width: 100%; /* Input nimmt volle Breite ein */
+    .controls-row {
+        justify-content: space-between; /* Zwischenraum zwischen Buttons */
     }
 }
 
